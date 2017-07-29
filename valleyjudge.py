@@ -1,19 +1,19 @@
 #!/usr/bin/python3
-
-import sys
-from collections import namedtuple
-from datetime import date, datetime, timedelta
-from collections import defaultdict, Iterable
-import numbers
-import math
-from types import new_class
-import shlex
-from itertools import accumulate
 import functools
-from argparse import ArgumentParser
-from os.path import basename
-
 import logging
+import math
+import numbers
+import shlex
+import sys
+
+from argparse import ArgumentParser
+from collections import defaultdict, Iterable, namedtuple
+from datetime import date, datetime, timedelta
+from itertools import accumulate
+from os.path import basename
+from rtstock.stock import Stock
+from types import new_class
+
 log = logging.getLogger(__name__)
 
 def typecheck(value, type):
@@ -283,7 +283,9 @@ class RsuGrant(object):
     """Equity grant"""
     def __init__(self,
                  *,
-                 total,
+                 total_by_value = None,
+                 total_by_quantity = None,
+                 stock_name = None,
                  start = None,
                  vesting_dates = DEFAULT_VESTING_DATES,
                  vesting = (0.25, 0.25, 0.25, 0.25)):
@@ -302,12 +304,21 @@ class RsuGrant(object):
         vests in that year.
 
         """
-        self.total = typecheck(total, numbers.Real)
+        if total_by_value is not None and total_by_quantity is not None:
+            raise ValueError("Either provide totals by value or by quantity, not both")
+        if not math.isclose(sum(vesting), 1.0, rel_tol=1e-5):
+            raise ValueError("Vesting fractions do not sum to 1: %1.5f" % sum(vesting))
+        if total_by_quantity is not None:
+            self.stock_name = typecheck(stock_name, str)
+        self.total = typecheck(total_by_value, numbers.Real) if total_by_value is not None else self.get_stock_value(total_by_quantity, Stock(stock_name)) 
         self.start = typecheck(start, (date, timedelta, type(None)))
         self.vesting_dates = typecheck(vesting_dates, seq_of(pair_of(int)))
         self.vesting = typecheck(vesting, seq_of(numbers.Real))
-        if not math.isclose(sum(vesting), 1.0, rel_tol=1e-5):
-            raise ValueError("vesting fractions do not sum to 1: %1.5f" % sum(vesting))
+
+    def get_stock_value(self, quantity, stock):
+        value = stock.get_latest_price()[0].get("LastTradePriceOnly")
+        log.debug("The stock value of %s is %s" % (str(stock), value))
+        return quantity * float(value)
 
 class Offer(object):
     """Describes an offer"""
