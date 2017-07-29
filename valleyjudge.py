@@ -316,12 +316,16 @@ class RsuGrant(object):
 
         """
         if total_by_value is not None and total_by_quantity is not None:
-            raise ValueError("Either provide totals by value or by quantity, not both")
+            raise ValueError("Either provide totals by value or by quantity, "
+                             "not both")
         if not math.isclose(sum(vesting), 1.0, rel_tol=1e-5):
-            raise ValueError("Vesting fractions do not sum to 1: %1.5f" % sum(vesting))
+            raise ValueError("Vesting fractions do not sum to 1: %1.5f"
+                             % sum(vesting))
         if total_by_quantity is not None:
             self.stock_name = typecheck(stock_name, str)
-        self.total = typecheck(total_by_value, numbers.Real) if total_by_value is not None else self.get_stock_value(total_by_quantity, Stock(stock_name)) 
+        self.total = typecheck(total_by_value, numbers.Real) if total_by_value \
+                     is not None else self.get_stock_value(
+                         total_by_quantity, Stock(stock_name)) 
         self.start = typecheck(start, (date, timedelta, type(None)))
         self.vesting_dates = typecheck(vesting_dates, seq_of(pair_of(int)))
         self.vesting = typecheck(vesting, seq_of(numbers.Real))
