@@ -11,7 +11,12 @@ from collections import defaultdict, Iterable, namedtuple
 from datetime import date, datetime, timedelta
 from itertools import accumulate
 from os.path import basename
-from rtstock.stock import Stock
+try:
+    from rtstock.stock import Stock
+except ImportError:
+    raise ImportError('The realtime-stock package is required. You can find out '
+                      'how to install it here: '
+                      'https://pypi.python.org/pypi/realtime-stock')
 from types import new_class
 
 log = logging.getLogger(__name__)
