@@ -296,9 +296,15 @@ class RsuGrant(object):
                  vesting = (0.25, 0.25, 0.25, 0.25)):
         """Create an equity grant description.
 
-        TOTAL is the total size, in dollars, of the grant.  START is
-        the date on which it starts; if None, the grant clock starts
-        on the company start date.  VESTING_DATES is a sequence of
+        TOTAL_BY_VALUE is the total size, in dollars, of the grant.  
+        TOTAL_BY_QUANTITY is the total size, in number of RSUs, of the grant.
+        Only one (TOTAL_BY_VALUE or TOTAL_BY_QUANTITY) should be provided.
+        STOCK_NAME is the stock ticker symbol for the company ("AMZN", "GOOG",
+        etc). This only needs to be provided if using TOTAL_BY_QUANTITY, so the
+        current stock price can be looked up.
+        
+        START is the date on which the grant starts; if None, the grant clock
+        starts on the company start date.  VESTING_DATES is a sequence of
         (MONTH, DAY) pairs on which equity grants vest --- a grant
         that vests quarterly will have a four-element
         VESTING_DATES sequence.
