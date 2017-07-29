@@ -16,7 +16,7 @@ make_offer_comparison(
             bonus = 50000,
             state = "CA",
             color = "red",
-            grants = RsuGrant(total = 100000),
+            grants = RsuGrant(total_by_value = 100000),
         ),
 
         Offer(
@@ -25,7 +25,7 @@ make_offer_comparison(
             bonus = 10000,
             state = "WA",
             color = "purple",
-            grants = RsuGrant(total = 250000,
+            grants = RsuGrant(total_by_value = 250000,
                               vesting = (0.05, 0.15, 0.40, 0.40))),
 
     ),

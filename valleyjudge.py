@@ -1,19 +1,24 @@
 #!/usr/bin/python3
-
-import sys
-from collections import namedtuple
-from datetime import date, datetime, timedelta
-from collections import defaultdict, Iterable
-import numbers
-import math
-from types import new_class
-import shlex
-from itertools import accumulate
 import functools
-from argparse import ArgumentParser
-from os.path import basename
-
 import logging
+import math
+import numbers
+import shlex
+import sys
+
+from argparse import ArgumentParser
+from collections import defaultdict, Iterable, namedtuple
+from datetime import date, datetime, timedelta
+from itertools import accumulate
+from os.path import basename
+try:
+    from rtstock.stock import Stock
+except ImportError:
+    raise ImportError('The realtime-stock package is required. You can find out '
+                      'how to install it here: '
+                      'https://pypi.python.org/pypi/realtime-stock')
+from types import new_class
+
 log = logging.getLogger(__name__)
 
 def typecheck(value, type):
@@ -283,15 +288,23 @@ class RsuGrant(object):
     """Equity grant"""
     def __init__(self,
                  *,
-                 total,
+                 total_by_value = None,
+                 total_by_quantity = None,
+                 stock_name = None,
                  start = None,
                  vesting_dates = DEFAULT_VESTING_DATES,
                  vesting = (0.25, 0.25, 0.25, 0.25)):
         """Create an equity grant description.
 
-        TOTAL is the total size, in dollars, of the grant.  START is
-        the date on which it starts; if None, the grant clock starts
-        on the company start date.  VESTING_DATES is a sequence of
+        TOTAL_BY_VALUE is the total size, in dollars, of the grant.  
+        TOTAL_BY_QUANTITY is the total size, in number of RSUs, of the grant.
+        Only one (TOTAL_BY_VALUE or TOTAL_BY_QUANTITY) should be provided.
+        STOCK_NAME is the stock ticker symbol for the company ("AMZN", "GOOG",
+        etc). This only needs to be provided if using TOTAL_BY_QUANTITY, so the
+        current stock price can be looked up.
+        
+        START is the date on which the grant starts; if None, the grant clock
+        starts on the company start date.  VESTING_DATES is a sequence of
         (MONTH, DAY) pairs on which equity grants vest --- a grant
         that vests quarterly will have a four-element
         VESTING_DATES sequence.
@@ -302,12 +315,25 @@ class RsuGrant(object):
         vests in that year.
 
         """
-        self.total = typecheck(total, numbers.Real)
+        if total_by_value is not None and total_by_quantity is not None:
+            raise ValueError("Either provide totals by value or by quantity, "
+                             "not both")
+        if not math.isclose(sum(vesting), 1.0, rel_tol=1e-5):
+            raise ValueError("Vesting fractions do not sum to 1: %1.5f"
+                             % sum(vesting))
+        if total_by_quantity is not None:
+            self.stock_name = typecheck(stock_name, str)
+        self.total = typecheck(total_by_value, numbers.Real) if total_by_value \
+                     is not None else self.get_stock_value(
+                         total_by_quantity, Stock(stock_name)) 
         self.start = typecheck(start, (date, timedelta, type(None)))
         self.vesting_dates = typecheck(vesting_dates, seq_of(pair_of(int)))
         self.vesting = typecheck(vesting, seq_of(numbers.Real))
-        if not math.isclose(sum(vesting), 1.0, rel_tol=1e-5):
-            raise ValueError("vesting fractions do not sum to 1: %1.5f" % sum(vesting))
+
+    def get_stock_value(self, quantity, stock):
+        value = stock.get_latest_price()[0].get("LastTradePriceOnly")
+        log.debug("The stock value of %s is %s" % (str(stock), value))
+        return quantity * float(value)
 
 class Offer(object):
     """Describes an offer"""
